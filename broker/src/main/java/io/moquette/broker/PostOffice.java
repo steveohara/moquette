@@ -307,6 +307,13 @@ class PostOffice {
     }
 
     CompletableFuture<Void> receivedPublishQos0(Topic topic, String username, String clientID, MqttPublishMessage msg) {
+    void receivePingReq(MQTTConnection mqttConnection, MqttMessage msg) {
+        LOG.trace("Received PINGREQ");
+        interceptor.notifyClientPing(mqttConnection.getClientId());
+    }
+
+    void receivedPublishQos0(Topic topic, String username, String clientID, ByteBuf payload, boolean retain,
+                             MqttPublishMessage msg) {
         if (!authorizator.canWrite(topic, username, clientID)) {
             LOG.error("client is not authorized to publish on topic: {}", topic);
             ReferenceCountUtil.release(msg);
@@ -518,6 +525,7 @@ class PostOffice {
         if (isSessionPresent) {
             LOG.debug("Sending PUBLISH message to active subscriber CId: {}, topicFilter: {}, qos: {}",
                       sub.getClientId(), sub.getTopicFilter(), qos);
+            ByteBuf payload = origPayload.retainedDuplicate();
             targetSession.sendNotRetainedPublishOnSessionAtQos(topic, qos, payload);
         } else {
             // If we are, the subscriber disconnected after the subscriptions tree selected that session as a

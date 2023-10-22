@@ -34,7 +34,7 @@ public interface InterceptHandler {
 
     Class<?>[] ALL_MESSAGE_TYPES = {InterceptConnectMessage.class, InterceptDisconnectMessage.class,
             InterceptConnectionLostMessage.class, InterceptPublishMessage.class, InterceptSubscribeMessage.class,
-            InterceptUnsubscribeMessage.class, InterceptAcknowledgedMessage.class, InterceptExceptionMessage.class};
+            InterceptUnsubscribeMessage.class, InterceptAcknowledgedMessage.class, InterceptExceptionMessage.class, , InterceptPingRequestMessage.class};
 
     /**
      * @return the identifier of this intercept handler.
@@ -59,6 +59,8 @@ public interface InterceptHandler {
      *
      * @param msg The message that was published.
      */
+    void onPingRequest(InterceptPingRequestMessage msg);
+
     void onPublish(InterceptPublishMessage msg);
 
     void onSubscribe(InterceptSubscribeMessage msg);

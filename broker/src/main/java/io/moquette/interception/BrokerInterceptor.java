@@ -43,8 +43,12 @@ public final class BrokerInterceptor implements Interceptor {
     private final Map<Class<?>, List<InterceptHandler>> handlers;
     private final ExecutorService executor;
 
-    private BrokerInterceptor(int poolSize, List<InterceptHandler> handlers) {
+    // Should PINGREQ messages notified via the interceptors or not
+    private boolean notifyPingRequests;
+
+    private BrokerInterceptor(int poolSize, List<InterceptHandler> handlers, boolean notifyPingRequests) {
         LOG.info("Initializing broker interceptor. InterceptorIds={}", getInterceptorIds(handlers));
+        this.notifyPingRequests = notifyPingRequests;
         this.handlers = new HashMap<>();
         for (Class<?> messageType : InterceptHandler.ALL_MESSAGE_TYPES) {
             this.handlers.put(messageType, new CopyOnWriteArrayList<InterceptHandler>());
@@ -61,7 +65,7 @@ public final class BrokerInterceptor implements Interceptor {
      * @param handlers InterceptHandlers listeners.
      */
     public BrokerInterceptor(List<InterceptHandler> handlers) {
-        this(1, handlers);
+        this(1, handlers, false);
     }
 
     /**
@@ -71,7 +75,7 @@ public final class BrokerInterceptor implements Interceptor {
      *
      */
     public BrokerInterceptor(IConfig props, List<InterceptHandler> handlers) {
-        this(Integer.parseInt(props.getProperty(BrokerConstants.BROKER_INTERCEPTOR_THREAD_POOL_SIZE, "1")), handlers);
+        this(Integer.parseInt(props.getProperty(BrokerConstants.BROKER_INTERCEPTOR_THREAD_POOL_SIZE, "1")), handlers, props.boolProp(BrokerConstants.INTERCEPT_PINGREQ_PROPERTY_NAME, false));
     }
 
     /**
@@ -116,6 +120,17 @@ public final class BrokerInterceptor implements Interceptor {
             LOG.debug("Notifying unexpected MQTT client disconnection to interceptor CId={}, username={}, " +
                 "interceptorId={}", clientID, username, handler.getID());
             executor.execute(() -> handler.onConnectionLost(new InterceptConnectionLostMessage(clientID, username)));
+        }
+    }
+
+    @Override
+    public void notifyClientPing(String clientID) {
+        if (notifyPingRequests) {
+            for (final InterceptHandler handler : this.handlers.get(InterceptPingRequestMessage.class)) {
+                LOG.debug("Notifying MQTT client ping request to interceptor CId={}" +
+                    "interceptorId={}", clientID, handler.getID());
+                executor.execute(() -> handler.onPingRequest(new InterceptPingRequestMessage(clientID)));
+            }
         }
     }
 

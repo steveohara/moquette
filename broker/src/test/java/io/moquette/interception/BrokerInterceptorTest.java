@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -67,6 +68,11 @@ public class BrokerInterceptorTest {
         @Override
         public void onConnectionLost(InterceptConnectionLostMessage msg) {
             n.set(30);
+        }
+
+        @Override
+        public void onPingRequest(InterceptPingRequestMessage msg) {
+            n.set(100);
         }
 
         @Override
@@ -155,6 +161,29 @@ public class BrokerInterceptorTest {
         interceptor.notifyTopicUnsubscribed("o2", "cli1234", "cli1234");
         interval();
         assertEquals(80, n.get());
+    }
+
+    @Test
+    public void testNotifyPingReq() throws Exception {
+        interceptor.notifyClientPing("cli1234");
+        interval();
+        assertNotSame(100, n.get());
+
+        // Now repeat the test with a new interceptor configured to not acknowledge PINGREQ
+        IConfig props = new MemoryConfig(new Properties());
+        props.setProperty(BrokerConstants.INTERCEPT_PINGREQ_PROPERTY_NAME, "false");
+        BrokerInterceptor pingInterceptor = new BrokerInterceptor(props, Collections.<InterceptHandler>singletonList(new MockObserver()));
+        pingInterceptor.notifyClientPing("cli1234");
+        interval();
+        assertNotSame(100, n.get());
+
+        // Finally with a new interceptor configured to acknowledge PINGREQ
+        props = new MemoryConfig(new Properties());
+        props.setProperty(BrokerConstants.INTERCEPT_PINGREQ_PROPERTY_NAME, "true");
+        pingInterceptor = new BrokerInterceptor(props, Collections.<InterceptHandler>singletonList(new MockObserver()));
+        pingInterceptor.notifyClientPing("cli1234");
+        interval();
+        assertEquals(100, n.get());
     }
 
     @Test

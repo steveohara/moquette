@@ -23,6 +23,7 @@ import java.io.File;
 public final class BrokerConstants {
 
     public static final String INTERCEPT_HANDLER_PROPERTY_NAME = "intercept.handler";
+    public static final String INTERCEPT_PINGREQ_PROPERTY_NAME = "intercept.pingreq";
     public static final String BROKER_INTERCEPTOR_THREAD_POOL_SIZE = "intercept.thread_pool.size";
     /**
      * @deprecated use the DATA_PATH_PROPERTY_NAME to define the path where to store

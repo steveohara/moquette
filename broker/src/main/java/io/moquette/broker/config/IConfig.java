@@ -100,6 +100,7 @@ public abstract class IConfig {
         setProperty(PERSISTENT_QUEUE_TYPE_PROPERTY_NAME, "segmented");
         setProperty(DATA_PATH_PROPERTY_NAME, "data/");
         setProperty(PERSISTENCE_ENABLED_PROPERTY_NAME, Boolean.TRUE.toString());
+        setProperty(BrokerConstants.INTERCEPT_PINGREQ_PROPERTY_NAME, Boolean.FALSE.toString());
     }
 
     public abstract IResourceLoader getResourceLoader();
