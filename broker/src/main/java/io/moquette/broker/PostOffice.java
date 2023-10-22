@@ -306,14 +306,12 @@ class PostOffice {
         mqttConnection.sendUnsubAckMessage(topics, clientID, messageId);
     }
 
-    CompletableFuture<Void> receivedPublishQos0(Topic topic, String username, String clientID, MqttPublishMessage msg) {
     void receivePingReq(MQTTConnection mqttConnection, MqttMessage msg) {
         LOG.trace("Received PINGREQ");
         interceptor.notifyClientPing(mqttConnection.getClientId());
     }
 
-    void receivedPublishQos0(Topic topic, String username, String clientID, ByteBuf payload, boolean retain,
-                             MqttPublishMessage msg) {
+    CompletableFuture<Void> receivedPublishQos0(Topic topic, String username, String clientID, MqttPublishMessage msg) {
         if (!authorizator.canWrite(topic, username, clientID)) {
             LOG.error("client is not authorized to publish on topic: {}", topic);
             ReferenceCountUtil.release(msg);
@@ -518,20 +516,21 @@ class PostOffice {
         }
     }
 
-    private void publishToSession(ByteBuf payload, Topic topic, Subscription sub, MqttQoS qos) {
+    private void publishToSession(ByteBuf origPayload, Topic topic, Subscription sub, MqttQoS qos) {
         Session targetSession = this.sessionRegistry.retrieve(sub.getClientId());
 
         boolean isSessionPresent = targetSession != null;
         if (isSessionPresent) {
             LOG.debug("Sending PUBLISH message to active subscriber CId: {}, topicFilter: {}, qos: {}",
                       sub.getClientId(), sub.getTopicFilter(), qos);
+            // we need to retain because duplicate only copy r/w indexes and don't retain() causing refCnt = 0
             ByteBuf payload = origPayload.retainedDuplicate();
             targetSession.sendNotRetainedPublishOnSessionAtQos(topic, qos, payload);
         } else {
-            // If we are, the subscriber disconnected after the subscriptions tree selected that session as a
-            // destination.
-            LOG.debug("PUBLISH to not yet present session. CId: {}, topicFilter: {}, qos: {}", sub.getClientId(),
-                      sub.getTopicFilter(), qos);
+        // If we are, the subscriber disconnected after the subscriptions tree selected that session as a
+        // destination.
+        LOG.debug("PUBLISH to not yet present session. CId: {}, topicFilter: {}, qos: {}", sub.getClientId(),
+                  sub.getTopicFilter(), qos);
         }
     }
 
